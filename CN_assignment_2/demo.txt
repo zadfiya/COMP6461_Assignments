@@ -1,0 +1,27 @@
+
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Credentials: true
+
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<title>Redirecting...</title>
+<h1>Redirecting...</h1>
+<p>You should be redirected automatically to target URL: <a href="/get">/get</a>.  If not click the link.
+
+HTTP/1.1 200 OK
+Date: Mon, 23 Oct 2023 18:34:03 GMT
+Content-Type: application/json
+Content-Length: 198
+Connection: keep-alive
+Temp.Server: gunicorn/19.9.0
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Credentials: true
+
+{
+  "args": {}, 
+  "headers": {
+    "Host": "httpbin.org", 
+    "X-Amzn-Trace-Id": "Root=1-6536bc9b-1691caae1c60dfa4481f45f7"
+  }, 
+  "origin": "174.91.205.23", 
+  "url": "http://httpbin.org/get"
+}

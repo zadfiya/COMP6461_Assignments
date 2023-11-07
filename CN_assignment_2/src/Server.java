@@ -227,7 +227,7 @@ public class Server {
 						&& url.contains("Content-Disposition:inline")) {
 					body = body + "\n\t\t\"Content-Disposition\": \"inline\",";
 				}
-				body = body + "\n\t\t\"Connection\": \"close\",\n";
+				body +=  "\n\t\t\"Connection\": \"close\",\n";
 				body = body + "\t\t\"Host\": \"" + host + "\"\n";
 				body = body + "\t},\n";
 

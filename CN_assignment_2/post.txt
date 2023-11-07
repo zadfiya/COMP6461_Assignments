@@ -1,0 +1,24 @@
+HTTP/1.1 200 OK
+Date: Mon, 23 Oct 2023 20:15:16 GMT
+Content-Type: application/json
+Content-Length: 348
+Connection: keep-alive
+Temp.Server: gunicorn/19.9.0
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Credentials: true
+
+{
+  "args": {}, 
+  "data": "{userName:Naren}", 
+  "files": {}, 
+  "form": {}, 
+  "headers": {
+    "Content-Length": "16", 
+    "Content-Type": "application/json", 
+    "Host": "httpbin.org", 
+    "X-Amzn-Trace-Id": "Root=1-6536d454-3a79042213b8a5e77135aa50"
+  }, 
+  "json": null, 
+  "origin": "174.91.205.23", 
+  "url": "http://httpbin.org/post"
+}

@@ -1,265 +1,249 @@
 import java.io.*;
 import java.net.Socket;
-import java.net.URL;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Scanner;
 
-public class Httpc implements Serializable{
-    private static final long serialVersionUID = 2207162898379302282L;
-    static ObjectOutputStream oos = null;
-    static ObjectInputStream ois = null;
-    static ServerResponse serverResponse;
-    public static void main(String[] args) throws IOException, ClassNotFoundException {
-        boolean isRedirection=false;
-        while(true) {
-            String request;
-            if (!isRedirection) {
-                System.out.print("Enter Command: ");
-                Scanner sc = new Scanner(System.in);
-                request = sc.nextLine();
 
-                if (request.isEmpty() || request.length() == 0 || !request.contains(Constant.HTTPC)) {
-                    System.out.println(Constant.INVALID_COMMAND);
-                    continue;
-                }
-            } else {
-                System.out.println(Constant.REDIRECTION_SUCCESSFUL);
-                request = Constant.REDIRECTION_REQUEST;
-            }
+public class Httpc {
 
-            String[] requestArr = request.split(" ");
-            ArrayList<String> requestList = new ArrayList<>();
+	private static final String HTTPC = "httpc";
 
-            for (int i = 0; i < requestArr.length; i++) {
-                requestList.add(requestArr[i]);
-            }
+	private static HttpClientRequest request = new HttpClientRequest();
+	private static List<String> headerLst = null;
+	private static StringBuilder fileData = null;
 
-            if (requestList.contains(Constant.HELP)) {
-                if (requestList.contains(Constant.GET)) {
-                    System.out.println(Constant.helpMenuPrint(Constant.GET));
-                } else if (requestList.contains(Constant.POST)) {
-                    System.out.println(Constant.helpMenuPrint(Constant.POST));
-                } else {
-                    System.out.println(Constant.helpMenuPrint(Constant.HELP));
-                }
-            } else {
-                // -d and -f can not be used at same time
-                if (requestList.contains("-d") && requestList.contains("-f")) {
-                    System.out.println(Constant.InlineFileDataError);
-                    continue;
-                }
-
-                int urlIdx = 1;
-                if (requestList.contains("-o")) {
-                    urlIdx = 3;
-                }
-
-                //URL of Web server
-//                String targetURL = requestList.get(requestList.size() - urlIdx).substring(0, requestList.get(requestList.size() - urlIdx).lastIndexOf('/') + 1);
-                String targetURL = requestList.get(requestList.size() - urlIdx);
-
-                if (targetURL.contains("\'")) {
-                    targetURL = targetURL.replace("\'", "");
-                }
-                URL url = new URL(targetURL);
-                String hostName = url.getHost();
-
-                //Socket
-                Socket client = new Socket(hostName, 8080);
-                OutputStream outStream = client.getOutputStream();
-                oos = new ObjectOutputStream(client.getOutputStream());
-                System.out.println("Sending request to Socket Temp.Server");
-                oos.writeObject(request);
-
-                ois = new ObjectInputStream(client.getInputStream());
-                serverResponse = (ServerResponse) ois.readObject();
-                printResult(serverResponse);
-
-                // getting request method like get, post etc.
-                String httpMethod = requestList.get(1).toUpperCase();
-
-                //getting parameters(text after host)
-//                String queryParams = requestList.get(requestList.size() - urlIdx).substring(requestList.get(requestList.size() - urlIdx).lastIndexOf('/'));
-                    String queryParams = url.getPath();
-                    if(url.getQuery()!=null)
-                    {
-                        queryParams+= '?' + url.getQuery();
-                    }
+	// InetAddress host = InetAddress.getLocalHost();
+	static Socket socket = null;
+	static ObjectOutputStream oos = null;
+	static ObjectInputStream ois = null;
+	static HttpClientResponse serverResponse;
 
 
-                if (queryParams.contains("\'")) {
-                    queryParams = queryParams.replace("\'", "");
-                }
+	public static void main(String[] args) throws Exception {
 
-                PrintWriter printWriter = new PrintWriter(outStream);
+		int count = 0;
 
-                // Preparing request by adding method and parameters
-                printWriter.print(httpMethod + " " + queryParams + " HTTP/1.1\r\n");
+		while (true) {
 
-                // Adding host to request
-                printWriter.print("Host: " + hostName + "\r\n");
+			try {
 
-                String inlineData = new String();
-                StringBuffer fileData = new StringBuffer();
+				headerLst = new ArrayList<String>();
+				fileData = new StringBuilder();
 
-                if (requestList.contains("-d")) {
-                    inlineData = requestList.get(requestList.indexOf("-d") + 1);
-                    if (inlineData.contains("\'")) {
-                        inlineData = inlineData.replace("\'", "");
-                    }
-                    printWriter.print("Content-Length: " + inlineData.length() + "\r\n");
-                }
-                //for the file data
-                else if (requestList.contains("-f")) {
-                    File file = new File(requestList.get(requestList.indexOf("-f") + 1));
-                    BufferedReader br = new BufferedReader(new FileReader(file));
-                    String st;
-                    while ((st = br.readLine()) != null) {
-                        fileData.append(st);
-                    }
-                    printWriter.println("Content-Length: " + fileData.length() + "\r\n");
-                }
-                if (requestList.contains("-h")) {
-                    if (!requestList.contains("-d") && !requestList.contains("-f")) {
-                        int noOfHeaders = requestList.size() - 1 - requestList.indexOf("-h") - 1;
-                        for (int i = 1; i <= noOfHeaders; i++) {
-                            printWriter.print(requestList.get(requestList.indexOf("-h") + i) + "\r\n");
-                        }
-                    } else if (requestList.contains("-d") || requestList.contains("-f")) {
-                        int noOfHeaders = 0;
-                        if (requestList.contains("-d")) {
-                            noOfHeaders = requestList.indexOf("-d") - requestList.indexOf("-h") - 1;
-                        } else if (requestList.contains("-f")) {
-                            noOfHeaders = requestList.indexOf("-f") - requestList.indexOf("-h") - 1;
-                        }
-                        for (int i = 1; i <= noOfHeaders; i++) {
-                            printWriter.print(requestList.get(requestList.indexOf("-h") + i) + "\r\n");
-                        }
-                    }
-                }
-                // Code for adding in-line data and file data to the request
-                if (requestList.contains("-d")) {
-                    printWriter.print("\r\n");
-                    printWriter.print(inlineData);
-                } else if (requestList.contains("-f")) {
-                    printWriter.print(fileData);
-                    printWriter.print("\r\n");
-                } else {
-                    printWriter.print("\r\n");
-                }
-                printWriter.flush();
+				// checking for redirection
+				if (request.isRedirect() && count <= 3) {
+					count++;
+
+					request.setHttpRequest(
+							HTTPC + " " + request.getRequestMethod() + " -v " + request.getRedirectLocation());
+					request.setRedirect(false);
+
+				} else {
+					count = 0;
+					request = new HttpClientRequest();
+					System.out.print("Please Enter httpc command ==> ");
+					Scanner scanner = new Scanner(System.in);
+					request.setHttpRequest(scanner.nextLine());
+
+					if (request.getHttpRequest() == null || request.getHttpRequest().isEmpty()) {
+						System.out.println("Invalid URL please try again");
+						continue;
+					}
+				}
+
+				String[] dataArray = request.getHttpRequest().split(" ");
+				List<String> dataList = Arrays.asList(dataArray);
+
+				if (dataList.contains("help")) {
+
+					if (dataList.contains("post")) {
+						System.out.println(
+								"usage: httpc post [-v] [-h key:value] [-d inline-data] [-f file] URL\\nPost executes a HTTP ");
+					} else if (dataList.contains("get")) {
+						System.out
+								.println("usage: httpc get [-v] [-h key:value] URL\\nGet executes a HTTP GET request ");
+					} else {
+						System.out.println("httpc is a curl-like application but supports HTTP protocol only.\n");
+					}
+				}
+
+				// validation start
+				if (dataList.get(0).contains("httpc")
+						&& (dataList.get(1).contains("get") || dataList.get(1).contains("post"))) {
+					request.setClientType("httpc");
+
+					if (dataList.get(1).contains("get")
+							&& (dataList.contains("--d") || dataList.contains("-d") || dataList.contains("-f"))) {
+						System.out.println("-f or -d are not allowed in GET Request");
+						continue;
+					}
+
+					if (dataList.get(1).contains("post")
+							&& ((dataList.contains("--d") || dataList.contains("-d")) && dataList.contains("-f"))) {
+						System.out.println(
+								"your command is not Valid ==> -f and -d both are not allowed in POST request");
+						continue;
+					}
+
+					parseInputRequest(dataList);
+
+					URI uri = new URI(request.getRequestUrl());
+					String hostName = uri.getHost();
+
+					// establish socket connection to server
+					socket = new Socket(hostName, uri.getPort() !=-1 ?uri.getPort():80 );
+					// write to socket using ObjectOutputStream
+					oos = new ObjectOutputStream(socket.getOutputStream());
+					System.out.println("Sending request to Socket Server");
+					oos.writeObject(request);
+
+					// read the server response message
+					ois = new ObjectInputStream(socket.getInputStream());
+					serverResponse = (HttpClientResponse) ois.readObject();
+
+					if (request.isFileWrite()) {
+
+						// Method call for write response in file
+						writetoFile(serverResponse);
+
+					} else {
+
+						// Method call for printing response in console
+						printresult(serverResponse);
+
+					}
+
+//					clientSocket.close();
+
+					// close resources
+					ois.close();
+					oos.close();
+
+				} else {
+
+					System.out.println("Invalid URL please. Provide valid httpc get or httpc post URL");
+				}
+
+			} catch (Exception e) {
+				e.printStackTrace();
+				System.out.println("Invalid URL please. Provide valid httpc get or httpc post URL");
+				continue;
+			}
+
+		}
+
+	}
 
 
-                BufferedReader reader = new BufferedReader(new InputStreamReader(client.getInputStream()));
-                String temp;
-                // if request contains 'verbose'(-v) command
+	private static void writetoFile(HttpClientResponse serverResponse) throws IOException {
 
-                String statusResponse = reader.readLine();
+		System.out.println("=============================================================================>>");
 
-                String[] statusArr = statusResponse.split(" ");
-                if (statusArr[1].contains("3")) {
-                    // if redirect code in status
-                    System.out.println(statusResponse);
-                    isRedirection = true;
-                    Constant.setRedirectionRequest("");
-                    if(requestList.contains("-o")) {
-                        String filePath = requestList.get(requestList.size() - 1);
-                        Constant.setRedirectionRequest(" -o " + filePath);
-                        FileWriter file = new FileWriter(filePath, true);
-                        BufferedWriter writer = new BufferedWriter(file);
-                        PrintWriter pWriter = new PrintWriter(writer);
-                        pWriter.println(Constant.NEW_LINE);
-                        pWriter.flush();
-                        pWriter.close();
-                    }
+		FileWriter fileWriter = new FileWriter(request.getFileWritePath(), true);
+		BufferedWriter bufferedWriter = new BufferedWriter(fileWriter);
+		PrintWriter printWriter = new PrintWriter(bufferedWriter);
 
-                    String t;
-                    while ((t = reader.readLine()) != null) {
-                        if (t.startsWith("Location:")) {
+		if (request.isVerbosePreset()) {
+			printWriter.println("=============================================================================>>");
+			printWriter.println(serverResponse.getResponseHeaders());
+			printWriter.println(serverResponse.getBody());
 
-                            System.out.println("redirectLocation ==> " + t.split(" ")[1]+ Constant.NEW_LINE);
-                            break;
-                        }
+		} else {
+			printWriter.println("=============================================================================>>");
+			printWriter.println(serverResponse.getBody());
+		}
+		System.out
+				.println("Response has been successfully written in ==> " + request.getFileWritePath() + "  File path");
 
-                    }
-                    continue;
-                }
-                isRedirection = false;
+		printWriter.flush();
+		printWriter.close();
 
-                if (requestList.contains("-o")) {
-                    String filePath = requestList.get(requestList.size() - 1);
+	}
 
-                    FileWriter file = new FileWriter(filePath, true);
-                    BufferedWriter writer = new BufferedWriter(file);
-                    PrintWriter pWriter = new PrintWriter(writer);
 
-                    if (requestList.contains("-v")) {
-                        pWriter.println(statusResponse);
-                        while ((temp = reader.readLine()) != null) {
-                            pWriter.println(temp);
-                            if (temp.equals("}"))
-                                break;
-                        }
-                    }
-                    // if request does not contain 'verbose'(-v) command
-                    else {
-                        int flag = 0;
-                        while ((temp = reader.readLine()) != null) {
-                            if (temp.trim().equals("{")) flag = 1;
-                            if (flag == 1) {
+	private static void printresult(HttpClientResponse serverResponsep) throws IOException {
 
-                                pWriter.println(temp);
-                                if (temp.equals("}"))
-                                    break;
-                            }
-                        }
-                    }
-                    pWriter.flush();
-                    pWriter.close();
-                }
+		System.out.println("=============================================================================>>");
 
-                else {
-                    if (requestList.contains("-v")) {
-                        System.out.println(statusResponse);
-                        while ((temp = reader.readLine()) != null) {
-                            System.out.println(temp);
-                            if (temp.equals("}"))
-                                break;
-                        }
-                    }
-                    // if request does not contain 'verbose'(-v) command
-                    else {
-                        int flag = 0;
+		if (request.isVerbosePreset()) {
 
-                        while ((temp = reader.readLine()) != null) {
-                            if (temp.trim().equals("{")) flag = 1;
-                            if (flag == 1) {
-                                System.out.println(temp);
-                                if (temp.equals("}"))
-                                    break;
-                            }
-                        }
-                    }
+			System.out.println(serverResponse.getResponseHeaders());
+			System.out.println(serverResponse.getBody());
+		} else {
 
-                }
-                reader.close();
-                client.close();
-            }
-        }
-    }
+			System.out.println(serverResponse.getBody());
 
-    private static void printResult(ServerResponse serverResponse) {
-        System.out.println("=============================================================================>>");
+		}
 
-//        if (request.isVerbosePreset()) {
-//
-//            System.out.println(serverResponse.getResponseHeaders());
-//            System.out.println(serverResponse.getBody());
-//        } else {
+	}
 
-            System.out.println(serverResponse.getBody());
-        System.out.println("=============================================================================>>");
 
-//        }
-    }
+	private static void parseInputRequest(List<String> dataList)
+			throws URISyntaxException, UnknownHostException, IOException {
+
+		// Collecting user request elements
+		for (int i = 0; i < dataList.size(); i++) {
+
+			if (dataList.get(i).equals("-v")) {
+				request.setVerbosePreset(true);
+
+			} else if (dataList.get(i).startsWith("http://") || dataList.get(i).startsWith("https://")) {
+				request.setRequestUrl(dataList.get(i));
+
+			} else if (dataList.get(i).equals("-h")) {
+
+				headerLst.add(dataList.get(i + 1));
+
+				request.setHttpHeader(true);
+				request.setHeaderLst(headerLst);
+
+			} else if (dataList.get(i).equals("-d") || dataList.get(i).equals("--d")) {
+
+				request.setInlineData(true);
+				request.setInlineData(dataList.get(i + 1));
+
+			} else if (dataList.get(i).equals("-f")) {
+
+				request.setFilesend(true);
+				request.setFileSendPath(dataList.get(i + 1));
+
+			} else if (dataList.get(i).equals("-o")) {
+
+				request.setFileWrite(true);
+				request.setFileWritePath(dataList.get(i + 1));
+
+			}
+		}
+
+		request.setRequestMethod(dataList.get(1));
+
+		// for -d inline data
+		if (request.isInlineData()) {
+			if (request.getInlineData().contains("\'")) {
+
+				request.setInlineData(request.getInlineData().replace("\'", ""));
+
+			}
+
+			// -f for sending file data
+		} else if (request.isFilesend()) {
+
+			File filetoSend = new File(request.getFileSendPath());
+			BufferedReader bufferedReader = new BufferedReader(new FileReader(filetoSend));
+			String string;
+			while ((string = bufferedReader.readLine()) != null) {
+				fileData.append(string);
+			}
+
+			bufferedReader.close();
+			request.setFileSendData(fileData.toString());
+
+		}
+
+	}
 }

@@ -1,0 +1,53 @@
+HTTP/1.1 200 OK
+Date: Mon, 23 Oct 2023 18:35:03 GMT
+Content-Type: application/json
+Content-Length: 540
+Connection: keep-alive
+Temp.Server: gunicorn/19.9.0
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Credentials: true
+
+{
+  "args": {}, 
+  "data": "{\t\t\"Name\": \"Naren\",\t\t\"Version\": \"9\",\t\t\"Install\": \"apt\",\t\t\"Owner\": \"B A D S H A H\",\t\t\"Kernel\": \"4.9\"}", 
+  "files": {}, 
+  "form": {}, 
+  "headers": {
+    "Content-Length": "100", 
+    "Host": "httpbin.org", 
+    "X-Amzn-Trace-Id": "Root=1-6536bcd7-3234c12a5df41d8f20c122b4"
+  }, 
+  "json": {
+    "Install": "apt", 
+    "Kernel": "4.9", 
+    "Name": "Naren", 
+    "Owner": "B A D S H A H", 
+    "Version": "9"
+  }, 
+  "origin": "174.91.205.23", 
+  "url": "http://httpbin.org/post"
+}
+HTTP/1.1 200 OK
+Date: Mon, 23 Oct 2023 18:35:31 GMT
+Content-Type: application/json
+Content-Length: 348
+Connection: keep-alive
+Temp.Server: gunicorn/19.9.0
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Credentials: true
+
+{
+  "args": {}, 
+  "data": "{userName:Naren}", 
+  "files": {}, 
+  "form": {}, 
+  "headers": {
+    "Content-Length": "16", 
+    "Content-Type": "application/json", 
+    "Host": "httpbin.org", 
+    "X-Amzn-Trace-Id": "Root=1-6536bcf3-4d0c73fa794a089c2618a873"
+  }, 
+  "json": null, 
+  "origin": "174.91.205.23", 
+  "url": "http://httpbin.org/post"
+}
