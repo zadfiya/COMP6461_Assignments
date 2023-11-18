@@ -2,24 +2,17 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * POJO class for Client Request
- * 
- * @author <a href="mailto:z_tel@encs.concordia.ca">Zankhanaben Patel</a>
- */
-public class HttpClientRequest implements Serializable {
+public class HttpcRequest implements Serializable {
 
-	/**
-	 * 
-	 */
-	private static final long serialVersionUID = 2207162898379302282L;
-	private String requestUrl;
-	private String inlineData;
-	private String redirectLocation;
-	private String requestMethod;
+	private static final long serialVersionUID = 7220169837930282282L;
 	private String httpRequest;
-	private String fileSendPath;
+	private String requestUrl;
+	private String requestMethod;
+	private String redirectLocation;
+	private String clientType;
+	private String inlineData;
 	private String fileSendData;
+	private String fileSendPath;
 	private String fileWritePath;
 	private boolean isVerbosePreset;
 	private boolean isHttpHeader;
@@ -27,7 +20,6 @@ public class HttpClientRequest implements Serializable {
 	private boolean isFilesend;
 	private boolean isFileWrite;
 	private boolean isRedirect;
-	private String clientType;
 	private String message;
 	
 	public String getClientType() {
@@ -170,7 +162,7 @@ public class HttpClientRequest implements Serializable {
 
 	@Override
 	public String toString() {
-		return "HttpClientRequest [requestUrl=" + requestUrl + ", inlineData=" + inlineData + ", redirectLocation="
+		return "HttpcRequest [requestUrl=" + requestUrl + ", inlineData=" + inlineData + ", redirectLocation="
 				+ redirectLocation + ", requestMethod=" + requestMethod + ", httpRequest=" + httpRequest
 				+ ", fileSendPath=" + fileSendPath + ", fileSendData=" + fileSendData + ", fileWritePath="
 				+ fileWritePath + ", isVerbosePreset=" + isVerbosePreset + ", isHttpHeader=" + isHttpHeader

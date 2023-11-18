@@ -1,20 +1,12 @@
 import java.io.Serializable;
 
 public class ServerResponse implements Serializable {
-    private static final long serialVersionUID = -2167025103933277470L;
-    private String responseHeaders;
+    private static final long serialVersionUID = -7021695103233470277L;
     private String body;
-    private String responseCode;
-    private String responseMessage;
     private String requestFileName;
-
-    public String getResponseHeaders() {
-        return responseHeaders;
-    }
-
-    public void setResponseHeaders(String responseHeaders) {
-        this.responseHeaders = responseHeaders;
-    }
+    private String responseCode;
+    private String responseHeaders;
+    private String responseMessage;
 
     public String getBody() {
         return body;
@@ -22,22 +14,6 @@ public class ServerResponse implements Serializable {
 
     public void setBody(String body) {
         this.body = body;
-    }
-
-    public String getResponseCode() {
-        return responseCode;
-    }
-
-    public void setResponseCode(String responseCode) {
-        this.responseCode = responseCode;
-    }
-
-    public String getResponseMessage() {
-        return responseMessage;
-    }
-
-    public void setResponseMessage(String responseMessage) {
-        this.responseMessage = responseMessage;
     }
 
     public String getRequestFileName() {
@@ -48,9 +24,34 @@ public class ServerResponse implements Serializable {
         this.requestFileName = requestFileName;
     }
 
+    public String getResponseCode() {
+        return responseCode;
+    }
+
+    public void setResponseCode(String responseCode) {
+        this.responseCode = responseCode;
+    }
+
+    public String getResponseHeaders() {
+        return responseHeaders;
+    }
+
+    public void setResponseHeaders(String responseHeaders) {
+        this.responseHeaders = responseHeaders;
+    }
+
+    public String getResponseMessage() {
+        return responseMessage;
+    }
+
+    public void setResponseMessage(String responseMessage) {
+        this.responseMessage = responseMessage;
+    }
+
+
     @Override
     public String toString() {
-        return "HttpClientResponse [responseHeaders=" + responseHeaders + ", body=" + body + ", responseCode="
+        return "ServerResponse [responseHeaders=" + responseHeaders + ", body=" + body + ", responseCode="
                 + responseCode + ", responseMessage=" + responseMessage + ", requestFileName=" + requestFileName + "]";
     }
 }

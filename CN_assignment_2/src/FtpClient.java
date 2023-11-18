@@ -10,12 +10,12 @@ import java.util.Scanner;
 
 public class FtpClient {
 
-    private static HttpClientRequest clientRequest = new HttpClientRequest();
+    private static HttpcRequest clientRequest = new HttpcRequest();
     private static List<String> headerLst = null;
     static Socket socket = null;
     static ObjectOutputStream oos = null;
     static ObjectInputStream ois = null;
-    static HttpClientResponse serverResponse;
+    static HttpcResponse serverResponse;
 
     public static void main(String[] args)
             throws UnknownHostException, IOException, EOFException, URISyntaxException, ClassNotFoundException {
@@ -52,26 +52,23 @@ public class FtpClient {
 
             URI uri = new URI(clientRequest.getRequestUrl());
             String hostName = uri.getHost();
+
             // establish socket connection to server
             socket = new Socket(hostName, uri.getPort());
+
             // write to socket using ObjectOutputStream
             oos = new ObjectOutputStream(socket.getOutputStream());
             ois = new ObjectInputStream(socket.getInputStream());
             System.out.println("Sending request to Socket Server");
             oos.writeObject(clientRequest);
 
-//            oos.writeObject("Test");
-
             String method = clientRequest.getRequestMethod();
 
             // read the server response message
-            serverResponse = (HttpClientResponse) ois.readObject();
+            serverResponse = (HttpcResponse) ois.readObject();
 
-//            System.out.println("serverResponse ==> "+serverResponse);
-            System.out.println(method+" mrthod");
             if (method.equalsIgnoreCase("get/")) {
 
-//                System.out.println("serverResponse ==> "+serverResponse);
                 System.out.println(serverResponse.getResponseHeaders());
                 System.out.println(serverResponse.getBody());
 
@@ -83,16 +80,10 @@ public class FtpClient {
                     if (!statusCode.equals("404")) {
 
                         String fileData = serverResponse.getBody();
-                        String fileName = serverResponse.getRequestFileName();
-
-//                        file = new File(dir + "/attachment/" + "abc.txt");
-//                        file.createNewFile();
-//
-//                        FileWriter fw = new FileWriter(file);
+                        // String fileName = serverResponse.getRequestFileName();
                         StringWriter sw = new StringWriter();
                         BufferedWriter bw = new BufferedWriter(sw);
                         PrintWriter pw = new PrintWriter(bw);
-                        System.out.println("temp: fileData 1" + fileData);
                         pw.print(fileData);
                         pw.flush();
                         pw.close();
@@ -117,7 +108,7 @@ public class FtpClient {
 
             oos.flush();
             oos.close();
-            break;
+            // break;
 
         }
 

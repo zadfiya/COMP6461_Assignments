@@ -1,6 +1,7 @@
 public class Constant {
     public static String HTTPC = "httpc";
     public static String INVALID_COMMAND = "invalid Command!!";
+    public static String INVALID_URL = "Invalid URL please. Provide valid httpc get or httpc post URL";
     public static String REDIRECTION_SUCCESSFUL = "Redirection Successful :)";
     public static String REDIRECTION_REQUEST = "httpc get -v http://httpbin.org/get";
     public static String InlineFileDataError = "Either [-d] or [-f] can be used but not both.";
@@ -8,6 +9,7 @@ public class Constant {
     public static String GET = "get";
     public static String POST ="post";
     public static String HELP = "help";
+    public static String LINE_SEPARATOR = "=============================================================================>>";
 
     public static void setRedirectionRequest(String req)
     {

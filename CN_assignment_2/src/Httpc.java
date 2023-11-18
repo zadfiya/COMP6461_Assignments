@@ -13,15 +13,14 @@ public class Httpc {
 
 	private static final String HTTPC = "httpc";
 
-	private static HttpClientRequest request = new HttpClientRequest();
+	private static HttpcRequest request = new HttpcRequest();
 	private static List<String> headerLst = null;
 	private static StringBuilder fileData = null;
 
-	// InetAddress host = InetAddress.getLocalHost();
 	static Socket socket = null;
 	static ObjectOutputStream oos = null;
 	static ObjectInputStream ois = null;
-	static HttpClientResponse serverResponse;
+	static HttpcResponse serverResponse;
 
 
 	public static void main(String[] args) throws Exception {
@@ -45,7 +44,7 @@ public class Httpc {
 
 				} else {
 					count = 0;
-					request = new HttpClientRequest();
+					request = new HttpcRequest();
 					System.out.print("Please Enter httpc command ==> ");
 					Scanner scanner = new Scanner(System.in);
 					request.setHttpRequest(scanner.nextLine());
@@ -96,7 +95,7 @@ public class Httpc {
 					String hostName = uri.getHost();
 
 					// establish socket connection to server
-					socket = new Socket(hostName, uri.getPort() !=-1 ?uri.getPort():80 );
+					socket = new Socket(hostName, uri.getPort() !=-1 ?uri.getPort():8080 );
 					// write to socket using ObjectOutputStream
 					oos = new ObjectOutputStream(socket.getOutputStream());
 					System.out.println("Sending request to Socket Server");
@@ -104,7 +103,7 @@ public class Httpc {
 
 					// read the server response message
 					ois = new ObjectInputStream(socket.getInputStream());
-					serverResponse = (HttpClientResponse) ois.readObject();
+					serverResponse = (HttpcResponse) ois.readObject();
 
 					if (request.isFileWrite()) {
 
@@ -118,20 +117,17 @@ public class Httpc {
 
 					}
 
-//					clientSocket.close();
-
 					// close resources
 					ois.close();
 					oos.close();
 
 				} else {
-
-					System.out.println("Invalid URL please. Provide valid httpc get or httpc post URL");
+					System.out.println(Constant.INVALID_URL);
 				}
-
+				
 			} catch (Exception e) {
 				e.printStackTrace();
-				System.out.println("Invalid URL please. Provide valid httpc get or httpc post URL");
+				System.out.println(Constant.INVALID_URL);
 				continue;
 			}
 
@@ -140,21 +136,21 @@ public class Httpc {
 	}
 
 
-	private static void writetoFile(HttpClientResponse serverResponse) throws IOException {
+	private static void writetoFile(HttpcResponse serverResponse) throws IOException {
 
-		System.out.println("=============================================================================>>");
+		System.out.println(Constant.LINE_SEPARATOR);
 
 		FileWriter fileWriter = new FileWriter(request.getFileWritePath(), true);
 		BufferedWriter bufferedWriter = new BufferedWriter(fileWriter);
 		PrintWriter printWriter = new PrintWriter(bufferedWriter);
 
 		if (request.isVerbosePreset()) {
-			printWriter.println("=============================================================================>>");
+			System.out.println(Constant.LINE_SEPARATOR);
 			printWriter.println(serverResponse.getResponseHeaders());
 			printWriter.println(serverResponse.getBody());
 
 		} else {
-			printWriter.println("=============================================================================>>");
+			System.out.println(Constant.LINE_SEPARATOR);
 			printWriter.println(serverResponse.getBody());
 		}
 		System.out
@@ -166,9 +162,10 @@ public class Httpc {
 	}
 
 
-	private static void printresult(HttpClientResponse serverResponsep) throws IOException {
+	// Print Verbose in console
+	private static void printresult(HttpcResponse serverResponsep) throws IOException {
 
-		System.out.println("=============================================================================>>");
+		System.out.println(Constant.LINE_SEPARATOR);
 
 		if (request.isVerbosePreset()) {
 

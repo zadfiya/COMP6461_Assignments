@@ -33,9 +33,9 @@ public class Server {
 	static ObjectOutputStream oos = null;
 	static ObjectInputStream ois = null;
 
-	private static HttpClientResponse serverResponse;
+	private static HttpcResponse serverResponse;
 
-	private static HttpClientRequest clientRequest;
+	private static HttpcRequest clientRequest;
 
 	public static void main(String[] args) throws IOException, ClassNotFoundException, URISyntaxException {
 
@@ -79,20 +79,18 @@ public class Server {
 
 		while (true) {
 
-			serverResponse = new HttpClientResponse();
+			serverResponse = new HttpcResponse();
 
 			Socket socket = serverSocket.accept();
 			if (debug)
 				System.out.println("Server is Connected to client ======>>>");
 
 			// read from socket to ObjectInputStream object
-			ois = new
-					ObjectInputStream(socket.getInputStream());
+			ois = new ObjectInputStream(socket.getInputStream());
 			oos = new ObjectOutputStream(socket.getOutputStream());
+
 			// convert ObjectInputStream object to String
-			clientRequest = (HttpClientRequest) ois.readObject();
-//			System.out.println(clientRequest+ "client Request:::");
-			// System.out.println("Message Received: " + clientRequest);
+			clientRequest = (HttpcRequest) ois.readObject();
 
 			String clientType = clientRequest.getClientType();
 
@@ -125,41 +123,41 @@ public class Server {
 					serverResponse.setResponseHeaders(responseHeaders);
 				}
 				String body = "{\n";
-				body = body + "\t\"args\":";
-				body = body + "{";
+				body += "\t\"args\":";
+				body += "{";
 				// for query parameters from client
 				if (paramArr.length > 0) {
 					for (int i = 0; i < paramArr.length; i++) {
-						body = body + "\n\t    \"" + paramArr[i].substring(0, paramArr[i].indexOf("=")) + "\": \""
+						body += "\n\t    \"" + paramArr[i].substring(0, paramArr[i].indexOf("=")) + "\": \""
 								+ paramArr[i].substring(paramArr[i].indexOf("=") + 1) + "\"";
 						if (i != paramArr.length - 1) {
-							body = body + ",";
+							body += ",";
 						} else {
-							body = body + "\n";
-							body = body + "\t},\n";
+							body += "\n";
+							body += "\t},\n";
 						}
 					}
 				} else {
-					body = body + "},\n";
+					body += "},\n";
 				}
 
 				// if method type is POST then
 				if (method.equalsIgnoreCase("POST")) {
-					body = body + "\t\"data\": ";
+					body += "\t\"data\": ";
 					if (clientRequest.isInlineData()) {
 						inlineData = clientRequest.getInlineData();
-						body = body + "\"" + inlineData + "\",\n";
+						body += "\"" + inlineData + "\",\n";
 					} else if (clientRequest.isFilesend()) {
 						fileData = clientRequest.getFileSendData();
-						body = body + "\"" + fileData + "\",\n";
+						body += "\"" + fileData + "\",\n";
 					} else {
-						body = body + "\"\",\n";
+						body += "\"\",\n";
 					}
-					body = body + "\t\"files\": {},\n";
-					body = body + "\t\"form\": {},\n";
+					body += "\t\"files\": {},\n";
+					body += "\t\"form\": {},\n";
 				}
 
-				body = body + "\t\"headers\": {";
+				body += "\t\"headers\": {";
 
 				// for headers only
 				if (clientRequest.isHttpHeader()) {
@@ -168,30 +166,30 @@ public class Server {
 						String[] headerArr = header.split(":");
 						if (headerArr[0].equalsIgnoreCase("connection"))
 							continue;
-						body = body + "\n\t\t\"" + headerArr[0] + "\": \"" + headerArr[1].trim() + "\",";
+						body += "\n\t\t\"" + headerArr[0] + "\": \"" + headerArr[1].trim() + "\",";
 
 					}
 				}
 				if (clientRequest.isInlineData()) {
-					body = body + "\n\t\t\"Content-Length\": \"" + clientRequest.getInlineData().length() + "\",";
+					body += "\n\t\t\"Content-Length\": \"" + clientRequest.getInlineData().length() + "\",";
 				} else if (clientRequest.isFilesend()) {
-					body = body + "\n\t\t\"Content-Length\": \"" + clientRequest.getFileSendData().length() + "\",";
+					body += "\n\t\t\"Content-Length\": \"" + clientRequest.getFileSendData().length() + "\",";
 				}
-				body = body + "\n\t\t\"Connection\": \"close\",\n";
-				body = body + "\t\t\"Host\": \"" + host + "\"\n";
-				body = body + "\t},\n";
+				body += "\n\t\t\"Connection\": \"close\",\n";
+				body += "\t\t\"Host\": \"" + host + "\"\n";
+				body += "\t},\n";
 
 				if (method.equalsIgnoreCase("POST")) {
-					body = body + "\t\"json\": ";
+					body += "\t\"json\": ";
 					if (clientRequest.isInlineData()) {
-						body = body + "{\n\t\t " + inlineData.substring(1, inlineData.length() - 1) + "\n\t},\n";
+						body += "{\n\t\t " + inlineData.substring(1, inlineData.length() - 1) + "\n\t},\n";
 					} else {
-						body = body + "{\n\t\t " + fileData + "\n\t},\n";
+						body += "{\n\t\t " + fileData + "\n\t},\n";
 					}
 				}
-				body = body + "\t\"origin\": \"" + InetAddress.getLocalHost().getHostAddress() + "\",\n";
-				body = body + "\t\"url\": \"" + url + "\"\n";
-				body = body + "}";
+				body += "\t\"origin\": \"" + InetAddress.getLocalHost().getHostAddress() + "\",\n";
+				body += "\t\"url\": \"" + url + "\"\n";
+				body += "}";
 
 				serverResponse.setBody(body);
 				
@@ -216,25 +214,25 @@ public class Server {
 				if (debug)
 					System.out.println("Processing the httpfs request");
 				String body = "{\n";
-				body = body + "\t\"args\":";
-				body = body + "{},\n";
-				body = body + "\t\"headers\": {";
+				body += "\t\"args\":";
+				body += "{},\n";
+				body += "\t\"headers\": {";
 
 				if (!method.endsWith("/") && method.contains("get/")
 						&& url.contains("Content-Disposition:attachment")) {
-					body = body + "\n\t\t\"Content-Disposition\": \"attachment\",";
+					body += "\n\t\t\"Content-Disposition\": \"attachment\",";
 				} else if (!method.endsWith("/") && method.contains("get/")
 						&& url.contains("Content-Disposition:inline")) {
-					body = body + "\n\t\t\"Content-Disposition\": \"inline\",";
+					body += "\n\t\t\"Content-Disposition\": \"inline\",";
 				}
-				body +=  "\n\t\t\"Connection\": \"close\",\n";
-				body = body + "\t\t\"Host\": \"" + host + "\"\n";
-				body = body + "\t},\n";
+		        body += "\n\t\t\"Connection\": \"close\",\n";
+				body += "\t\t\"Host\": \"" + host + "\"\n";
+				body += "\t},\n";
 
 				System.out.println("body 1: "+body);
 				if (method.equalsIgnoreCase("get/")) {
-					System.out.println("inside get 1");
-					body = body + "\t\"files\": { ";
+					
+					body += "\t\"files\": { ";
 					List<String> files = getFilesFromDir(currentFolder);
 					List<String> fileFilterList = new ArrayList<String>();
 					fileFilterList.addAll(files);
@@ -250,9 +248,9 @@ public class Server {
 					for (int i = 0; i < fileFilterList.size(); i++) {
 
 						if (i != fileFilterList.size() - 1) {
-							body = body + fileFilterList.get(i) + " , ";
+							body += fileFilterList.get(i) + " , ";
 						} else {
-							body = body + fileFilterList.get(i) + " },\n";
+							body += fileFilterList.get(i) + " },\n";
 						}
 
 					}
@@ -261,12 +259,13 @@ public class Server {
 
 				// if the request is get/fileName
 				else if (!method.endsWith("/") && method.contains("get/")) {
-					System.out.println("inside get 2");
+
 					String response = "";
 					String requestedFileName = method.split("/")[1];
 					List<String> files = getFilesFromDir(currentFolder);
 
 					if (!files.contains(requestedFileName)) {
+						serverResponse.setResponseCode("404");
 						responseHeaders = getResponseHeaders(FILE_NOT_FOUND_STATUS_CODE);
 
 					} else {
@@ -277,7 +276,6 @@ public class Server {
 						if (url.contains("Content-Disposition:attachment")) {
 							serverResponse.setResponseCode("203");
 							serverResponse.setBody(response);
-							System.out.println("temp: response "+ response);
 							file = new File(dir + "/attachment/" + requestedFileName);
 							writeToFile(file, response);
 							serverResponse.setRequestFileName(requestedFileName);
@@ -285,7 +283,7 @@ public class Server {
 						} else {
 
 							serverResponse.setResponseCode("203");
-							body = body + "\t\"data\": \"" + response + "\",\n";
+							body += "\t\"data\": \"" + response + "\",\n";
 						}
 
 					}
@@ -293,7 +291,7 @@ public class Server {
 				}
 
 				else if (!method.endsWith("/") && method.contains("post/")) {
-					System.out.println("inside post 3:  ");
+
 					String fileName = method.split("/")[1];
 					File file = new File(fileName);
 					List<String> files = getFilesFromDir(currentFolder);
@@ -306,10 +304,6 @@ public class Server {
 									file.delete();
 									file = new File(dir + "/" + fileName);
 									writeToFile(file,clientRequest.getInlineData());
-//									file.createNewFile();
-//									FileWriter fw = new FileWriter(file);
-//									fw.write(clientRequest.getInlineData());
-//									fw.close();
 								}
 								responseHeaders = getResponseHeaders(FILE_OVERWRITTEN_STATUS_CODE);
 							} else {
@@ -320,16 +314,12 @@ public class Server {
 								file.delete();
 								file = new File(dir + "/" + fileName);
 								writeToFile(file,clientRequest.getInlineData());
-//								file.createNewFile();
-//								FileWriter fw = new FileWriter(file);
-//								fw.write(clientRequest.getInlineData());
-//								fw.close();
 							}
 							responseHeaders = getResponseHeaders(FILE_OVERWRITTEN_STATUS_CODE);
 						}
 
 					} else {
-						System.out.println("inside post 4:  ");
+			
 						file = new File(dir + "/" + fileName);
 						synchronized (file) {
 							file.createNewFile();
@@ -347,9 +337,9 @@ public class Server {
 
 				}
 
-				body = body + "\t\"origin\": \"" + InetAddress.getLocalHost().getHostAddress() + "\",\n";
-				body = body + "\t\"url\": \"" + url + "\"\n";
-				body = body + "}";
+				body += "\t\"origin\": \"" + InetAddress.getLocalHost().getHostAddress() + "\",\n";
+				body += "\t\"url\": \"" + url + "\"\n";
+				body += "}";
 
 				if (debug)
 					System.out.println("Sending the response to Client ======>");

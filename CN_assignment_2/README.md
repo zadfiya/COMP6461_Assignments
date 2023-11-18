@@ -1,63 +1,57 @@
+# Nayankumar Sorathiya (40227432)
+# Naren Zadfiya (40232646)
 
-# ********    Assignment 1 : Computer Networks    *********
+Phase :1
+# HTTP Server Implementation
+    httpc get -v http://localhost:8080/get?course=networking&assignment=1
 
-## Compile the java file with below Command :  
-- javac Httpc.java Constant.java
+    httpc get -h Content-Type:application/json http://localhost:8080/get?course=networking
 
-## Run the file with below command : 
-- java Httpc
+    httpc get -v -h Content-Type:application/json http://localhost:8080/get?course=networking&assignment=1
 
-## Test the code with following http request :--
+    ### For POST request ====>>
+    httpc post -h Content-Type:application/json -d '{"Assignment":1}' http://localhost:8080/post
 
-## General Usage:
-- httpc help
+    httpc post -h Content-Type:application/json -h Content-Type:application/json -d '{"Assignment":1}' http://localhost:8080/post
 
-## Get Usage:
-- httpc help get
+    httpc post -v -d '{"Assignment":1}' http://localhost:8080/post
 
-## Post Usage:
-- httpc help post
+    httpc post -v -h Content-Type:application/json -d '{"Assignment":1}' http://localhost:8080/post
 
+    httpc post -h Content-Type:application/json -d '{"Assignment":1}' http://localhost:8080/post?course=networking&assignment=1
 
-## GET Request
-- httpc get http://httpbin.org/get
-## Header
-- httpc get -h Authorization:token http://httpbin.org/get
-## Post Request
-- httpc post -d '{userName:NayanSorathiya}' http://httpbin.org/post
+    httpc post -v -h Content-Type:application/json -d '{"Assignment":1}' http://localhost:8080/post?course=networking&assignment=1
 
+    httpc post -h Content-Type:application/json -d '{"Assignment":1}' http://localhost:8080/post?course=networking&assignment=1 -o result.txt
 
-# Get Requests
+	httpc post -v -f file.json http://localhost:8080/post?course=networking&assignment=1
 
-### with verbose option
-- httpc get -v http://httpbin.org/get
+## Run the server file
+    httpfs -v -p 8080 -d /src
 
-### with Query Parameters
-- httpc get -v http://httpbin.org/get?marker=mario
+    httpfs -v -p 8080 -d E:\Concordia\banking
 
-### with Header Option
-- httpc get -h Authorizarion:token name:naren http://httpbin.org/get
+    httpfs -v
 
+## Run FTPClient (httpc option)
+	httpfs http://localhost:8080/get/
+	httpfs http://localhost:8080/get/test.txt
+	httpfs http://localhost:8080/post/test.txt -d '{"Assignment":2}'
+	httpfs http://localhost:8080/get/test99.txt
+	httpfs -h overwrite:true http://localhost:8080/post/test.txt -d '{"test":"nayan}'
+	httpfs http://localhost:8080/post/123.txt -d naren
+    httpfs -h overwrite:true http://localhost:8080/post/123.txt -d nayan
+    httpfs -h overwrite:false http://localhost:8080/post/123.txt -d naren
 
-# Post Requests
+## Content-Type Filteration
+	httpc -h Content-Type:json http://localhost:8080/get/
+    httpc -h Content-Type:html http://localhost:8080/get/
+    httpc -h Content-Type:txt http://localhost:8080/get/
 
-### with file.json
-- httpc post -v -f file.json http://httpbin.org/post
+## Content-Disposition
+     httpc -h Content-Disposition:attachment http://localhost:8080/get/test.txt
 
-### with inline Data
-- httpc post -d '{userName:NayanSorathiya}' -v http://httpbin.org/post
-- httpc post -h Content-Type:application/json -d '{userName:Naren}' -v http://httpbin.org/post
-
-## with -o option
-- httpc post -h Content-Type:application/json -d '{userName:Naren}' -v http://httpbin.org/post -o post.txt
-
-# Bonus part Redirection:
-- httpc get -v http://httpbin.org/redirect/1
-- httpc get -v http://httpbin.org/redirect/1 -o demo.txt
-
-# ****************************************************
-
-
-
-
-
+## Concurrent Scripts
+    ./script.sh 10
+    ./script2.sh 
+    ./script3.sh 10

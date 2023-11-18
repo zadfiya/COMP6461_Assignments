@@ -1,36 +1,54 @@
 Phase :1
-## GET Request
-httpc get http://httpbin.org/get
-## Header
-httpc get -h Authorization:token http://httpbin.org/get
-## Post Request
-httpc post -d '{userName:NayanSorathiya}' http://httpbin.org/post
+# HTTP Server Implementation
+    httpc get -v http://localhost:8080/get?course=networking&assignment=1
 
+    httpc get -h Content-Type:application/json http://localhost:8080/get?course=networking
 
-##Get Requests
+    httpc get -v -h Content-Type:application/json http://localhost:8080/get?course=networking&assignment=1
 
-with verbose option
-httpc get -v http://httpbin.org/get
+    ### For POST request ====>>
+    httpc post -h Content-Type:application/json -d '{"Assignment":1}' http://localhost:8080/post
 
-with Query Parameters
-httpc get -v http://httpbin.org/get?marker=mario
+    httpc post -h Content-Type:application/json -h Content-Type:application/json -d '{"Assignment":1}' http://localhost:8080/post
 
-With Header Option
-httpc get -h Authorizarion:token name:naren http://httpbin.org/get
+    httpc post -v -d '{"Assignment":1}' http://localhost:8080/post
 
+    httpc post -v -h Content-Type:application/json -d '{"Assignment":1}' http://localhost:8080/post
 
-##Post Requests
+    httpc post -h Content-Type:application/json -d '{"Assignment":1}' http://localhost:8080/post?course=networking&assignment=1
 
-with file.json
-httpc post -v -f file.json http://httpbin.org/post
+    httpc post -v -h Content-Type:application/json -d '{"Assignment":1}' http://localhost:8080/post?course=networking&assignment=1
 
-with inline Data
-httpc post -d '{userName:NayanSorathiya}' -v http://httpbin.org/post
-httpc post -h Content-Type:application/json -d '{userName:Naren}' -v http://httpbin.org/post
+    httpc post -h Content-Type:application/json -d '{"Assignment":1}' http://localhost:8080/post?course=networking&assignment=1 -o result.txt
 
-with -o option
-httpc post -h Content-Type:application/json -d '{userName:Naren}' -v http://httpbin.org/post -o post.txt
+	httpc post -v -f file.json http://localhost:8080/post?course=networking&assignment=1
 
-Bonus part Redirection:
-httpc get -v http://httpbin.org/redirect/1
-httpc get -v http://httpbin.org/redirect/1 -o demo.txt
+## Run the server file
+    httpfs -v -p 8080 -d /src
+
+    httpfs -v -p 8080 -d E:\Concordia\banking
+
+    httpfs -v
+
+## Run FTPClient (httpc option)
+	httpfs http://localhost:8080/get/
+	httpfs http://localhost:8080/get/test.txt
+	httpfs http://localhost:8080/post/test.txt -d '{"Assignment":2}'
+	httpfs http://localhost:8080/get/test99.txt
+	httpfs -h overwrite:true http://localhost:8080/post/test.txt -d '{"test":"nayan}'
+	httpfs http://localhost:8080/post/123.txt -d naren
+    httpfs -h overwrite:true http://localhost:8080/post/123.txt -d nayan
+    httpfs -h overwrite:false http://localhost:8080/post/123.txt -d naren
+
+## Content-Type Filteration
+	httpc -h Content-Type:json http://localhost:8080/get/
+    httpc -h Content-Type:html http://localhost:8080/get/
+    httpc -h Content-Type:txt http://localhost:8080/get/
+
+## Content-Disposition
+     httpc -h Content-Disposition:attachment http://localhost:8080/get/test.txt
+
+## Concurrent Scripts
+    ./script.sh 10
+    ./script2.sh 
+    ./script3.sh 10
