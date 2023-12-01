@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Commands
-READ_COMMAND="httpc http://localhost:8080/get/test.txt"
-WRITE_COMMAND="httpc http://localhost:8080/post/test.txt -d '{\"test\":123}'"
+READ_COMMAND="httpfs get/test.txt http://localhost:8080/get"
+WRITE_COMMAND="httpfs post/test.txt http://localhost:8080/post -d '{\"test\":123}'"
 
 # Start the write client in the background
 echo "$WRITE_COMMAND" | java FtpClient &

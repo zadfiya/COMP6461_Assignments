@@ -35,8 +35,33 @@ public class FtpClient {
 
             String[] requestArray = request.split(" ");
             requestArray[0] = "httpfs";
-            List<String> dataList = Arrays.asList(requestArray);
+            List<String> dataList = new ArrayList<>(Arrays.asList(requestArray));
             String url = "";
+
+            String regex1 = ".*post/.*";
+            String regex2 = ".*get/.*";
+            if(request.matches(regex1) || request.matches(regex2))
+            {
+                String temp[] = requestArray[1].split("/");
+                dataList.remove(1);
+                for(int i=0;i<dataList.size();i++)
+                {
+                    if(dataList.get(i).startsWith("http://"))
+                    {
+                        String req = dataList.get(i);
+                        req+="/";
+                        if(temp.length>1)
+                            req+=temp[1];
+                        dataList.set(i,req);
+                    }
+                }
+                request = String.join(" ", dataList);
+            }
+
+
+
+
+
             if (request.contains("post")) {
                 url = dataList.get(2);
 
@@ -108,7 +133,7 @@ public class FtpClient {
 
             oos.flush();
             oos.close();
-            // break;
+            //break;
 
         }
 
@@ -128,6 +153,7 @@ public class FtpClient {
 
             } else if (dataList.get(i).startsWith("http://") || dataList.get(i).startsWith("https://")) {
                 clientRequest.setRequestUrl(dataList.get(i));
+
 
             } else if (dataList.get(i).equals("-h")) {
 
@@ -161,6 +187,7 @@ public class FtpClient {
             if(strArray[i].startsWith("http://"))
             {
                 String[] methodarray = strArray[i].split("/");
+
                 if(methodarray.length==4)
                 {
                     clientRequest.setClientType(dataList.get(0));
