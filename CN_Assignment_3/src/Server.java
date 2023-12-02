@@ -130,6 +130,7 @@ public class Server {
         String body = "";
         String method ="";
         String responsePayload = "";
+        String splitArray[];
         //String temp = arr[1];
         int cnt=0;
         String[] clientRequestArray = requestPayload.split(" ");
@@ -150,21 +151,57 @@ public class Server {
 
         if(requestPayload.contains("get")&&requestPayload.contains("txt")){
             //System.out.println("HELO"+arr[arr.length-1]);
-            File myObj = new File("test.txt");
-            Scanner myReader = new Scanner(myObj);
-            while (myReader.hasNextLine()) {
-                body = body+myReader.nextLine();
+            splitArray = requestPayload.split(" ");
+            String fileName = splitArray[splitArray.length-1].split("/")[4];
+            File myObj = new File(fileName);
 
+            String responseHeader;
+            if(getFilesFromDir(new File(dir)).contains(fileName))
+            {
+                Scanner myReader = new Scanner(myObj);
+                while (myReader.hasNextLine()) {
+                    body = body+myReader.nextLine();
+
+                }
+              responseHeader = getResponseHeaders(OK_STATUS_CODE);
             }
-            responsePayload = body;
+            else
+            {
+                responseHeader = getResponseHeaders(FILE_NOT_FOUND_STATUS_CODE);
+                body = "\n\nFILE NOT FOUND!!\n";
+            }
+
+
+            responsePayload = responseHeader + body;
         }
-        else if(requestPayload.contains("post") && requestPayload.contains("txt") &&requestPayload.contains("json")&& requestPayload.contains("-d")){
-            FileWriter fWriter = new FileWriter("test.txt");
+        else if(requestPayload.contains("post") && (requestPayload.contains("txt") || requestPayload.contains("json")|| requestPayload.contains("-d"))){
+            splitArray = requestPayload.split(" ");
+            String fileName = splitArray[splitArray.length-3].split("/")[4];
+            String responseHeader;
+            boolean isExist = getFilesFromDir(new File(dir)).contains(fileName);
+            System.out.println(isExist);
+            if(requestPayload.contains("-h") && requestPayload.contains("overwrite:false") && isExist){
+                responseHeader = getResponseHeaders(FILE_NOT_OVERWRITTEN_STATUS_CODE);
+            }
+            else if(isExist)
+            {
+                responseHeader = getResponseHeaders(FILE_OVERWRITTEN_STATUS_CODE);
+            }
+            else
+            {
+                responseHeader = getResponseHeaders(NEW_FILE_CREATED_STATUS_CODE);
+            }
+            FileWriter fWriter = new FileWriter(fileName);
             fWriter.write("**************************");
-            fWriter.write(arr[arr.length-1]);
+            //fWriter.write(arr[arr.length-1]);
             fWriter.write(body);
             fWriter.write("\n");
-            responsePayload = "Data Written succesfully";
+            fWriter.flush();
+            fWriter.close();
+
+
+
+            responsePayload =responseHeader + "\n\nData Written succesfully\n";
         }
 
         else{
