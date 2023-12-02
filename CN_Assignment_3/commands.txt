@@ -1,0 +1,39 @@
+For Server:
+
+httpfs -v -p 8007
+
+For Running Router:
+
+router --port=3000 --drop-rate=0.2 --max-delay=10ms --seed=1
+router --port=3000 --max-delay=10ms --seed=1
+router --port=3000 --drop-rate=0.2 --seed=1
+
+
+For Client:
+
+GET:
+
+httpc http://localhost:8007/get/
+
+httpc http://localhost:8007/get/test.txt
+
+POST
+
+httpc http://localhost:8007/post/test.txt -d '{"Assignment":3}'
+
+httpc http://localhost:8007/post/test.json -d '{"Assignment":3}'
+
+httpc http://localhost:8007/post/test12.json -d '{"test":123}'
+
+httpc http://localhost:8007/post/123.txt -d ceedede
+
+
+====>Content-Type
+httpc -h Content-Type:txt http://localhost:8007/get/
+
+httpc -h Content-Type:json http://localhost:8007/get/
+
+httpc -h Content-Type:html http://localhost:8007/get/
+
+====>Content-Disposition
+httpc -h Content-Disposition:attachment http://localhost:8007/get/test.txt
