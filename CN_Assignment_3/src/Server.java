@@ -1,11 +1,11 @@
+import com.sun.net.httpserver.Headers;
+
+import javax.sound.midi.SysexMessage;
+
 import static java.nio.charset.StandardCharsets.UTF_8;
 
-import java.io.File;
-import java.io.FileWriter;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-import java.net.URL;
+import java.io.*;
+import java.net.*;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.DatagramChannel;
@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Scanner;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class Server {
 
@@ -37,6 +38,7 @@ public class Server {
     static int port = 8007;
     List<String> clientRequestList;
     static String[] arr = null;
+    private static final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
     public static void main(String[] args) throws Exception {
         String request;
@@ -94,23 +96,25 @@ public class Server {
                 buf.clear();
                 SocketAddress router = channel.receive(buf);
                 if (router != null) {
+                    // Parse a packet from the received raw data.
                     buf.flip();
+
                     Packet packet = Packet.fromBuffer(buf);
                     buf.flip();
 
                     String requestPayload = new String(packet.getPayload(), UTF_8);
-                    if (requestPayload.equals("Please Confirm I am Client")) {
+                    if (requestPayload.equals("Connect")) {
 
                         System.out.println(requestPayload);
-                        Packet resp = packet.toBuilder().setPayload("Hi from Server".getBytes()).create();
+                        Packet resp = packet.toBuilder().setPayload("ACK".getBytes()).create();
                         channel.send(resp.toBuffer(), router);
-                        System.out.println("Hiiii, Server this side");
+                        System.out.println("Sending ACK from Server");
                     } else if (requestPayload.contains("httpfs") || requestPayload.contains("httpc")) {
 
-                        String responsePayload = processPayload(requestPayload,arr);
+                        String responsePayload = processRequest(requestPayload);
                         Packet resp = packet.toBuilder().setPayload(responsePayload.getBytes()).create();
                         channel.send(resp.toBuffer(), router);
-                    } else if (requestPayload.equals("Got the Message")) {
+                    } else if (requestPayload.equals("Received")) {
                         arr = requestPayload.split(" ");
                         System.out.println(requestPayload);
                         Packet respClose = packet.toBuilder().setPayload("Close".getBytes()).create();
@@ -118,7 +122,7 @@ public class Server {
 
                     } else if (requestPayload.equals("Ok")) {
                         arr = requestPayload.split(" ");
-                        System.out.println(requestPayload + " Got the Message");
+                        System.out.println(requestPayload + " received..!");
 
                     }
                 }
@@ -126,121 +130,231 @@ public class Server {
         }
 
     }
-    private String processPayload(String requestPayload, String[] arr) throws Exception {
-        String body = "";
+    private String processRequest(String requestPayload) throws Exception {
+        String body = "{\n";
         String method ="";
         String responsePayload = "";
         String splitArray[];
+        String clientRequestURL ="";
+        List<String> files = getFilesFromDir(new File(dir));
         //String temp = arr[1];
         int cnt=0;
         String[] clientRequestArray = requestPayload.split(" ");
         clientRequestList = new ArrayList<>();
-
+        List<String> headerList = new ArrayList<>();
         for (int i = 0; i < clientRequestArray.length; i++) {
             clientRequestList.add(clientRequestArray[i]);
 
             if (clientRequestArray[i].startsWith("http://")) {
                 String[] methodarray = clientRequestArray[i].split("/");
+                clientRequestURL = clientRequestArray[i];
                 if (methodarray.length == 4) {
                     method = methodarray[3] + "/";
                 } else if (methodarray.length == 5) {
                     method = methodarray[3] + "/" + methodarray[4];
                 }
             }
+
+            if(clientRequestArray[i].equals("-h"))
+            {
+                headerList.add(clientRequestArray[i+1]);
+            }
+        }
+        String args="\t\"args\":";
+        URI uri = new URI(clientRequestURL);
+        String host = uri.getHost();
+
+        String query = uri.getQuery();
+        String[] paramArr = {};
+        if (query != null && !query.isEmpty()) {
+
+            paramArr = query.split("&");
         }
 
-        if(requestPayload.contains("get")&&requestPayload.contains("txt")){
-            //System.out.println("HELO"+arr[arr.length-1]);
+        args += "{";
+        if (paramArr.length > 0) {
+            for (int i = 0; i < paramArr.length; i++) {
+                args += "\n\t    \"" + paramArr[i].substring(0, paramArr[i].indexOf("=")) + "\": \""
+                        + paramArr[i].substring(paramArr[i].indexOf("=") + 1) + "\"";
+                if (i != paramArr.length - 1) {
+                    args += ",";
+                } else {
+                    args += "\n";
+                    args += "\t},\n";
+                }
+            }
+        } else {
+            args += "},\n";
+        }
+
+        String headers= "\t\"headers\": {";
+        if (headerList.size()>0) {
+
+            for (String header : headerList) {
+                String[] headerArr = header.split(":");
+                if (headerArr[0].equalsIgnoreCase("connection"))
+                    continue;
+                headers += "\n\t\t\"" + headerArr[0] + "\": \"" + headerArr[1].trim() + "\",";
+
+            }
+        }
+
+        headers += "\n\t\t\"Connection\": \"close\",\n";
+        headers += "\t\t\"Host\": \"" + host + "\"\n";
+        headers += "\t},\n";
+        String dataBody ="\t\"data\": \"";
+        String jsonBody = "\t\"json\": {";
+        String fileBody =  "\t\"files\": {";
+        String formBody = "\t\"form\": {";
+
+        if (debug)
+            System.out.println("Server is Processing the httpfs request");
+
+        body += args;
+        if(method.contains("get/")&&(!method.endsWith("/"))){
+
             splitArray = requestPayload.split(" ");
             String fileName = splitArray[splitArray.length-1].split("/")[4];
-            File myObj = new File(fileName);
+            File fileToread = new File(fileName);
 
             String responseHeader;
-            if(getFilesFromDir(new File(dir)).contains(fileName))
-            {
-                Scanner myReader = new Scanner(myObj);
-                while (myReader.hasNextLine()) {
-                    body = body+myReader.nextLine();
+            body +=headers;
 
+
+            if(files.contains(fileName))
+            {
+                synchronized (fileToread)
+                {
+                    dataBody += readToFile(fileToread);
                 }
+
               responseHeader = getResponseHeaders(OK_STATUS_CODE);
             }
             else
             {
+
                 responseHeader = getResponseHeaders(FILE_NOT_FOUND_STATUS_CODE);
-                body = "\n\nFILE NOT FOUND!!\n";
             }
+            dataBody += "\",\n";
+            body+=dataBody;
 
 
-            responsePayload = responseHeader + body;
+            responsePayload = responseHeader ;
         }
         else if(requestPayload.contains("post") && (requestPayload.contains("txt") || requestPayload.contains("json")|| requestPayload.contains("-d"))){
             splitArray = requestPayload.split(" ");
             String fileName = splitArray[splitArray.length-3].split("/")[4];
             String responseHeader;
-            boolean isExist = getFilesFromDir(new File(dir)).contains(fileName);
-            System.out.println(isExist);
+            File fileToWrite = new File(dir + "/"+ fileName);
+
+            boolean isExist = files.contains(fileName);
+
+            String dataToWrite = "";
             if(requestPayload.contains("-h") && requestPayload.contains("overwrite:false") && isExist){
+
                 responseHeader = getResponseHeaders(FILE_NOT_OVERWRITTEN_STATUS_CODE);
             }
             else if(isExist)
             {
+                synchronized (fileToWrite)
+                {
+                    dataToWrite+= readToFile(fileToWrite);
+                }
+
+
                 responseHeader = getResponseHeaders(FILE_OVERWRITTEN_STATUS_CODE);
             }
             else
             {
+                fileToWrite.createNewFile();
                 responseHeader = getResponseHeaders(NEW_FILE_CREATED_STATUS_CODE);
             }
-            FileWriter fWriter = new FileWriter(fileName);
-            fWriter.write("**************************");
-            //fWriter.write(arr[arr.length-1]);
-            fWriter.write(body);
-            fWriter.write("\n");
-            fWriter.flush();
-            fWriter.close();
+            synchronized (fileToWrite)
+            {
+                dataToWrite += splitArray[splitArray.length-1].replaceAll("\'","");
+                writeToFile(fileToWrite,dataToWrite);
+            }
 
 
 
-            responsePayload =responseHeader + "\n\nData Written succesfully\n";
+            dataBody +=   splitArray[splitArray.length-1].replaceAll("\'","") +"\n";
+            dataBody += "\",\n";
+            body+=dataBody;
+            fileBody +="},\n";
+            formBody +="},\n";
+
+
+            if(fileName.endsWith(".json"))
+            {
+                jsonBody+= "\"" + splitArray[splitArray.length-1] + "\",\n";
+            }
+            jsonBody += "\n\t},\n";
+            body+=fileBody;
+            body+=formBody;
+            body += headers;
+            body+=jsonBody;
+
+            responsePayload =responseHeader ;
         }
 
         else{
             String url;
-            String fileData = "";
-            String downloadFileName = "";
 
             if (requestPayload.contains("post")) {
-                url = clientRequestList.get(1);
+                url = clientRequestList.get(clientRequestList.size() - 3);
             } else {
                 url = clientRequestList.get(clientRequestList.size() - 1);
             }
-            String host = new URL(url).getHost();
+             host = new URL(url).getHost();
             String responseHeaders = getResponseHeaders(OK_STATUS_CODE);
+            jsonBody += "\n\t},\n";
+            dataBody += "\",\n";
+
+            if(method.contains("get"))
+            {
+                List<String> fileFilterList = new ArrayList<String>();
+                if (requestPayload.contains("Content-Type")) {
+                    String fileType = clientRequestList.get(clientRequestList.indexOf("-h") + 1).split(":")[1];
+                    fileFilterList = new ArrayList<String>();
+                    for (String file : files) {
+                        if (file.endsWith(fileType)) {
+                            fileFilterList.add(file);
+                        }
+                    }
+                }
+                else
+                    fileFilterList.addAll(files);
+
+                if (!fileFilterList.isEmpty()) {
+                    for (int i = 0; i < fileFilterList.size(); i++) {
+                        if (i != fileFilterList.size() - 1) {
+                            fileBody +=  fileFilterList.get(i) + ", ";
+                        } else {
+                            fileBody += fileFilterList.get(i)  ;
+                        }
+                    }
+                }
+            }
 
 
-            body = body + "\t\"args\":";
-            body = body + "{";
+            fileBody +="},\n";
 
-            body = body + "\n\t\t\"Content-Disposition\": \"Ass3\",";
-            body = body + "\n\t    \"" + "Connection" + "\": \""
-                    + "Close ," + "\"";
-            body = body + "\n\t    \"" + "Host" + "\": \""
-                    + "localhost ," + "\"";
-            body = body + "\t},\n";
-            body = body + "\"" + "File-Data" + "\",\n";
-            body = body + "\t\"files\": {},\n";
-            body = body + "\t\"form\": {},\n";
+            formBody +="},\n";
+            body+= dataBody;
+            body+= fileBody;
+            body+=formBody;
 
-            body = body + "\n\t\t\"Connection\": \"close\",\n";
-            body = body + "\t\t\"Host\": \"" + host + "\"\n";
-            body = body + "\t},\n";
-            body = body + "\t\"origin\": \"" + InetAddress.getLocalHost().getHostAddress() + "\",\n";
-            body = body + "\t\"url\": \"" + url + "\"\n";
-            body = body + "}";
+            body+=headers;
 
-            responsePayload = responseHeaders + body;
+            body+=jsonBody;
+
+
+            responsePayload = responseHeaders ;
 
         }
+        body = body + "\t\"url\": \"" + clientRequestURL + "\"\n";
+        body = body + "}";
+        responsePayload += "\n"+body+"\n";
 
         return responsePayload;
     }
@@ -254,6 +368,46 @@ public class Server {
         }
         return filelist;
     }
+
+    static private String readToFile(File file) throws IOException {
+        lock.readLock().lock();
+        String st, response="";
+        try
+        {
+            BufferedReader bufferedReader = new BufferedReader(new FileReader(file));
+
+            while ((st = bufferedReader.readLine()) != null) {
+                response = response + st;
+            }
+        }catch(IOException e)
+        {
+            throw new RuntimeException(e);
+        }
+        finally {
+            lock.readLock().unlock();
+        }
+
+        return response;
+    }
+
+    static private void writeToFile(File file, String data) throws IOException {
+        lock.writeLock().lock();
+
+        try {
+            FileWriter fw = null;
+
+            fw = new FileWriter(file);
+            fw.write(data);
+            fw.close();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        finally {
+            lock.writeLock().unlock();
+        }
+
+    }
+
     static String getResponseHeaders(String status) {
         DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
         Date date = new Date();

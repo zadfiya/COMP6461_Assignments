@@ -16,6 +16,7 @@ GET:
 httpc http://localhost:8007/get/
 
 httpc http://localhost:8007/get/test.txt
+httpc -h Content-Disposition:attachment http://localhost:8007/get/test.txt
 
 POST
 
