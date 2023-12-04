@@ -1,9 +1,6 @@
 import static java.nio.channels.SelectionKey.OP_READ;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
+
+import java.io.*;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.URL;
@@ -27,13 +24,13 @@ public class Client {
     static int ROUTER_PORT = 3000;
 
     public static void main(String[] args) throws Exception {
-        ArrayList<String> urlList = new ArrayList<>();
-        File file = new File("Ass3");
+
+        File file = new File("attachment");
         file.mkdir();
         while (true) {
             String url = "";
             String url1 = "";
-            System.out.print("Please enter your URL: ");
+            System.out.print("Enter httpfs command: ");
             receivedPackets.clear();
             SEQ_NO = 0;
             ACK_COUNT = 0;
@@ -41,13 +38,13 @@ public class Client {
             url = sc.nextLine();
 
             if (url.isEmpty() || url.length() == 0) {
-                System.out.println("Please enter valid URL!!!");
+                System.out.println("Inavalid Command...");
                 continue;
             }
 
             String[] arr = url.split(" ");
-            urlList = new ArrayList<>();
-            for (int i = 0; i < arr.length; i++) {
+            ArrayList<String>  urlList = new ArrayList<>();
+            for (int i = 0; i < arr.length; ++i) {
                 if(arr[i].startsWith("http://")) {
                     url1 = arr[i];
                 }
@@ -58,128 +55,147 @@ public class Client {
             int hostPort = new URL(url1).getPort();
             SocketAddress routerAddress = new InetSocketAddress(routerHost, ROUTER_PORT);
             InetSocketAddress serverAddress = new InetSocketAddress(hostName, hostPort);
-            proceedConnection(routerAddress, serverAddress);
+            connect(routerAddress, serverAddress);
             runClient(routerAddress, serverAddress, url);
         }
     }
 
-    private static void proceedConnection(SocketAddress routerAddress, InetSocketAddress serverAddress) throws Exception {
+    private static void connect(SocketAddress routerAddress, InetSocketAddress serverAddress) throws Exception {
 
-        try (DatagramChannel channel = DatagramChannel.open()) {
-            String msg = "Please Confirm I am Client";
+        try (DatagramChannel dataChannel = DatagramChannel.open()) {
+
+            String msg = "Connect";
             SEQ_NO++;
-            Packet p = new Packet.Builder().setType(0).setSequenceNumber(SEQ_NO)
-                    .setPortNumber(serverAddress.getPort()).setPeerAddress(serverAddress.getAddress())
+            Packet pkt = (new Packet.Builder())
+                    .setType(0).setSequenceNumber(SEQ_NO)
+                    .setPortNumber(serverAddress.getPort())
+                    .setPeerAddress(serverAddress.getAddress())
                     .setPayload(msg.getBytes()).create();
-            channel.send(p.toBuffer(), routerAddress);
-            System.out.println("CLient has sended Msg..");
+            dataChannel.send(pkt.toBuffer(), routerAddress);
+            System.out.println("Sending Connect from Client");
 
-            channel.configureBlocking(false);
+            dataChannel.configureBlocking(false);
             Selector selector = Selector.open();
-            channel.register(selector, OP_READ);
+            dataChannel.register(selector, OP_READ);
 
             selector.select(TIME_OUT);
 
-            Set<SelectionKey> keys = selector.selectedKeys();
-            if (keys.isEmpty()) {
-                System.out.println("Opps!! Timeover");
-                System.out.println("Retrying...");
-                resend(channel, p, routerAddress);
+            Set<SelectionKey> set = selector.selectedKeys();
+            if (set.isEmpty()) {
+
+                System.out.println("Timeout...Sending again!!");
+                resend(dataChannel, pkt, routerAddress);
             }
             ByteBuffer buf = ByteBuffer.allocate(Packet.MAX_LEN);
-            Packet resp = Packet.fromBuffer(buf);
-            String payload = new String(resp.getPayload(), StandardCharsets.UTF_8);
-            System.out.println(payload.trim() + "Got response from server");
-            receivedPackets.add(resp.getSequenceNumber());
-            keys.clear();
+            dataChannel.receive(buf); //temp: receiving lines
+            buf.flip(); //temp: buffer flipping
+            Packet respPkt = Packet.fromBuffer(buf);
+            String payload = new String(respPkt.getPayload(), StandardCharsets.UTF_8);
+            System.out.println(payload.trim() + " received from server");
+            receivedPackets.add(respPkt.getSequenceNumber());
+            set.clear();
         }
     }
-    private static void resend(DatagramChannel channel, Packet p, SocketAddress routerAddress) throws IOException {
-        channel.send(p.toBuffer(), routerAddress);
-        System.out.println(new String(p.getPayload()));
-        if (new String(p.getPayload()).equals("Got the Message")) {
+    private static void resend(DatagramChannel dataChannel, Packet pkt, SocketAddress routerAddress) throws IOException {
+        dataChannel.send(pkt.toBuffer(), routerAddress);
+
+        String payload = new String(pkt.getPayload());
+        PrintStream print = System.out;
+        print.println(payload);
+        print.println();
+        if (payload.equals("Received")) {
             ACK_COUNT++;
         }
-        channel.configureBlocking(false);
+        dataChannel.configureBlocking(false);
         Selector selector = Selector.open();
-        channel.register(selector, OP_READ);
+        dataChannel.register(selector, OP_READ);
         selector.select(TIME_OUT);
 
         Set<SelectionKey> keys = selector.selectedKeys();
         if (keys.isEmpty() && ACK_COUNT < 10) {
-            System.out.println("Opps!! Timeover");
-            System.out.println("Retrying...");
-            resend(channel, p, routerAddress);
-        } else {
-            return;
+            System.out.println("Timeout...Sending again");
+            resend(dataChannel, pkt, routerAddress);
         }
     }
 
     private static void runClient(SocketAddress routerAddr, InetSocketAddress serverAddr, String msg)
             throws IOException {
         String dir = System.getProperty("user.dir");
-        try (DatagramChannel channel = DatagramChannel.open()) {
+        try (DatagramChannel dataChannel = DatagramChannel.open()) {
             SEQ_NO++;
-            Packet p = new Packet.Builder().setType(0).setSequenceNumber(SEQ_NO)
-                    .setPortNumber(serverAddr.getPort()).setPeerAddress(serverAddr.getAddress())
+            Packet pkt = (new Packet.Builder())
+                    .setType(0)
+                    .setSequenceNumber(SEQ_NO)
+                    .setPortNumber(serverAddr.getPort())
+                    .setPeerAddress(serverAddr.getAddress())
                     .setPayload(msg.getBytes()).create();
-            channel.send(p.toBuffer(), routerAddr);
+            dataChannel.send(pkt.toBuffer(), routerAddr);
             System.out.println("Sending the request to the Router");
-            channel.configureBlocking(false);
+            dataChannel.configureBlocking(false);
             Selector selector = Selector.open();
-            channel.register(selector, OP_READ);
+            dataChannel.register(selector, OP_READ);
             selector.select(TIME_OUT);
             Set<SelectionKey> keys = selector.selectedKeys();
             if (keys.isEmpty()) {
-                System.out.println("Opps!! Timeover");
-                System.out.println("Retrying...");
-                resend(channel, p, routerAddr);
+                System.out.println("Timeout...Sending again");
+                resend(dataChannel, pkt, routerAddr);
             }
             ByteBuffer buf = ByteBuffer.allocate(Packet.MAX_LEN);
-            SocketAddress router = channel.receive(buf);
+            SocketAddress router = dataChannel.receive(buf);
             buf.flip();
             Packet resp = Packet.fromBuffer(buf);
             String payload = new String(resp.getPayload(), StandardCharsets.UTF_8);
             if (!receivedPackets.contains(resp.getSequenceNumber())) {
                 receivedPackets.add(resp.getSequenceNumber());
-                if (msg.contains("Content-Disposition:Ass3")) {
-                    String[] responseArray = payload.split("\\|");
-                    File file = new File(dir + "/Ass3/" + responseArray[1].trim());
-                    System.out.println("FILENAME::::::::::::::::::"+responseArray[1].trim());
+                if (msg.contains("Content-Disposition:attachment")) {
+
+                    String urlArray[] = payload.substring(payload.indexOf("\"url\":")).split(" ")[1]
+                            .replaceAll("\"","").replaceAll("}","").split("/");
+
+                    String dataSubString = payload.substring(payload.indexOf("\"data\":"));
+                    int dataEndIndex =dataSubString.indexOf(",");
+                    String Data = dataSubString.substring(9,dataEndIndex-1);
+
+                    File file = new File(dir + "/attachment/" + urlArray[urlArray.length-1].trim());
                     file.createNewFile();
                     FileWriter fw = new FileWriter(file);
                     BufferedWriter bw = new BufferedWriter(fw);
                     PrintWriter pw = new PrintWriter(bw);
-                    pw.print(responseArray[2]);
+                    pw.print(Data);
                     pw.flush();
                     pw.close();
-                    System.out.println(responseArray[0]);
-                    System.out.println("File is saved as Ass3");
+                    System.out.println();
+                    System.out.println("File downloaded in: "+dir+"\\attachment");
                 } else {
                     System.out.println("\n*********************************");
                     System.out.println(payload);
                 }
                 SEQ_NO++;
-                Packet pAck = new Packet.Builder().setType(0).setSequenceNumber(SEQ_NO)
-                        .setPortNumber(serverAddr.getPort()).setPeerAddress(serverAddr.getAddress())
-                        .setPayload("Got the Message".getBytes()).create();
-                channel.send(pAck.toBuffer(), routerAddr);
-                channel.configureBlocking(false);
+                Packet pkt2 = (new Packet.Builder()).setType(0)
+                        .setSequenceNumber(SEQ_NO)
+                        .setPortNumber(serverAddr.getPort())
+                        .setPeerAddress(serverAddr.getAddress())
+                        .setPayload("Received".getBytes()).create();
+                dataChannel.send(pkt2.toBuffer(), routerAddr);
+                dataChannel.configureBlocking(false);
                 selector = Selector.open();
-                channel.register(selector, OP_READ);
+                dataChannel.register(selector, OP_READ);
                 selector.select(TIME_OUT);
                 keys = selector.selectedKeys();
                 if (keys.isEmpty()) {
-                    resend(channel, pAck, router);
+                    resend(dataChannel, pkt2, router);
                 }
                 buf.flip();
-                System.out.println("Connection closed");
+                System.out.println("Connection closed..!");
                 keys.clear();
                 SEQ_NO++;
-                Packet pClose = new Packet.Builder().setType(0).setSequenceNumber(SEQ_NO)
-                        .setPortNumber(serverAddr.getPort()).setPeerAddress(serverAddr.getAddress())
+                Packet pClose = (new Packet.Builder()).setType(0)
+                        .setSequenceNumber(SEQ_NO)
+                        .setPortNumber(serverAddr.getPort())
+                        .setPeerAddress(serverAddr.getAddress())
                         .setPayload("Ok".getBytes()).create();
-                channel.send(pClose.toBuffer(), routerAddr);
+                dataChannel.send(pClose.toBuffer(), routerAddr);
+                System.out.println("OK sent");
             }
         }
     }
