@@ -1,3 +1,6 @@
+/**
+ * ASSIGNMENT 3 BY : NAREN (40232646) & NAYAN(40227432)
+ */
 import static java.nio.channels.SelectionKey.OP_READ;
 
 import java.io.*;
@@ -16,56 +19,68 @@ import java.util.Set;
 
 public class Client {
 
-    static long SEQ_NO = 0;
     static List<Long> receivedPackets = new ArrayList<>();
+    static long SEQ_NO = 0;
     static int TIME_OUT = 3000;
-    static int ACK_COUNT = 0;
-    static String routerHost = "127.0.0.1";
     static int ROUTER_PORT = 3000;
+    static String routerHost = "127.0.0.1";
+    static int ACK_COUNT = 0;
+
+    static String dir = System.getProperty("user.dir");
+
 
     public static void main(String[] args) throws Exception {
 
         File file = new File("attachment");
         file.mkdir();
         while (true) {
-            String url = "";
-            String url1 = "";
+
             System.out.print("Enter httpfs command: ");
             receivedPackets.clear();
-            SEQ_NO = 0;
             ACK_COUNT = 0;
+            SEQ_NO = 0;
+
             Scanner sc = new Scanner(System.in);
-            url = sc.nextLine();
+            String inputCommand = sc.nextLine();
 
-            if (url.isEmpty() || url.length() == 0) {
-                System.out.println("Inavalid Command...");
-                continue;
-            }
-
-            String[] arr = url.split(" ");
-            ArrayList<String>  urlList = new ArrayList<>();
-            for (int i = 0; i < arr.length; ++i) {
-                if(arr[i].startsWith("http://")) {
-                    url1 = arr[i];
+            if(inputCommand.length()!=0 && !inputCommand.isEmpty())
+            {
+                String request = "";
+                String[] arr = inputCommand.split(" ");
+                ArrayList<String>  urlList = new ArrayList<>();
+                for (int i = 0; i < arr.length; ++i) {
+                    if(arr[i].startsWith("http://")) {
+                        request = arr[i];
+                    }
+                    urlList.add(arr[i]);
                 }
-                urlList.add(arr[i]);
-            }
 
-            String hostName = new URL(url1).getHost();
-            int hostPort = new URL(url1).getPort();
-            SocketAddress routerAddress = new InetSocketAddress(routerHost, ROUTER_PORT);
-            InetSocketAddress serverAddress = new InetSocketAddress(hostName, hostPort);
-            connect(routerAddress, serverAddress);
-            runClient(routerAddress, serverAddress, url);
+                String hostName = new URL(request).getHost();
+                int hostPort = new URL(request).getPort();
+                SocketAddress routerAddress = new InetSocketAddress(routerHost, ROUTER_PORT);
+                InetSocketAddress serverAddress = new InetSocketAddress(hostName, hostPort);
+                connect(routerAddress, serverAddress);
+                runClient(routerAddress, serverAddress, inputCommand);
+            }
+            else
+            {
+                System.out.println("Inavalid Command...");
+            }
         }
     }
 
+    /**
+     *
+     * @param routerAddress
+     * @param serverAddress
+     * @throws Exception
+     */
     private static void connect(SocketAddress routerAddress, InetSocketAddress serverAddress) throws Exception {
 
         try (DatagramChannel dataChannel = DatagramChannel.open()) {
 
             String msg = "Connect";
-            SEQ_NO++;
+            ++SEQ_NO;
             Packet pkt = (new Packet.Builder())
                     .setType(0).setSequenceNumber(SEQ_NO)
                     .setPortNumber(serverAddress.getPort())
@@ -82,7 +97,6 @@ public class Client {
 
             Set<SelectionKey> set = selector.selectedKeys();
             if (set.isEmpty()) {
-
                 System.out.println("Timeout...Sending again!!");
                 resend(dataChannel, pkt, routerAddress);
             }
@@ -95,16 +109,28 @@ public class Client {
             receivedPackets.add(respPkt.getSequenceNumber());
             set.clear();
         }
+        catch(Exception e)
+        {
+            System.out.println("Error detected while sending data from Client to router: "+e.getMessage());
+        }
     }
+
+    /**
+     *
+     * @param dataChannel
+     * @param pkt
+     * @param routerAddress
+     * @throws IOException
+     */
     private static void resend(DatagramChannel dataChannel, Packet pkt, SocketAddress routerAddress) throws IOException {
         dataChannel.send(pkt.toBuffer(), routerAddress);
+        PrintStream print = System.out;
 
         String payload = new String(pkt.getPayload());
-        PrintStream print = System.out;
         print.println(payload);
         print.println();
         if (payload.equals("Received")) {
-            ACK_COUNT++;
+            ++ACK_COUNT;
         }
         dataChannel.configureBlocking(false);
         Selector selector = Selector.open();
@@ -113,14 +139,21 @@ public class Client {
 
         Set<SelectionKey> keys = selector.selectedKeys();
         if (keys.isEmpty() && ACK_COUNT < 10) {
-            System.out.println("Timeout...Sending again");
+            print.println("Timeout...Sending again");
             resend(dataChannel, pkt, routerAddress);
         }
     }
 
+    /**
+     *
+     * @param routerAddr
+     * @param serverAddr
+     * @param msg
+     * @throws IOException
+     */
     private static void runClient(SocketAddress routerAddr, InetSocketAddress serverAddr, String msg)
             throws IOException {
-        String dir = System.getProperty("user.dir");
+
         try (DatagramChannel dataChannel = DatagramChannel.open()) {
             SEQ_NO++;
             Packet pkt = (new Packet.Builder())
@@ -166,16 +199,21 @@ public class Client {
                     pw.close();
                     System.out.println();
                     System.out.println("File downloaded in: "+dir+"\\attachment");
-                } else {
+                }
+                else
+                {
                     System.out.println("\n*********************************");
                     System.out.println(payload);
                 }
-                SEQ_NO++;
-                Packet pkt2 = (new Packet.Builder()).setType(0)
+                ++SEQ_NO;
+                Packet pkt2 = (new Packet.Builder())
+                        .setType(0)
                         .setSequenceNumber(SEQ_NO)
                         .setPortNumber(serverAddr.getPort())
                         .setPeerAddress(serverAddr.getAddress())
-                        .setPayload("Received".getBytes()).create();
+                        .setPayload("Received".getBytes())
+                        .create();
+
                 dataChannel.send(pkt2.toBuffer(), routerAddr);
                 dataChannel.configureBlocking(false);
                 selector = Selector.open();
@@ -188,8 +226,9 @@ public class Client {
                 buf.flip();
                 System.out.println("Connection closed..!");
                 keys.clear();
-                SEQ_NO++;
-                Packet pClose = (new Packet.Builder()).setType(0)
+                ++SEQ_NO;
+                Packet pClose = (new Packet.Builder())
+                        .setType(0)
                         .setSequenceNumber(SEQ_NO)
                         .setPortNumber(serverAddr.getPort())
                         .setPeerAddress(serverAddr.getAddress())
