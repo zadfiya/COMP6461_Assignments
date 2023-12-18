@@ -1,6 +1,7 @@
-import com.sun.net.httpserver.Headers;
+/**
+ * ASSIGNMENT 3 BY : NAREN (40232646) & NAYAN(40227432)
+ */
 
-import javax.sound.midi.SysexMessage;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
@@ -31,13 +32,14 @@ public class Server {
     static String dir = System.getProperty("user.dir");
     static final String FILE_NOT_OVERWRITTEN_STATUS_CODE = "HTTP/1.1 201 FILE NOT OVER-WRITTEN";
     static final String NEW_FILE_CREATED_STATUS_CODE = "HTTP/1.1 202 NEW FILE CREATED";
-    static final String CONNECTIONA_LIVE = "Connection: keep-alive";
+    static final String CONNECTION_ALIVE = "Connection: keep-alive";
+
+    static long tId;
 
     static File currentDir;
     static int timeout = 4000;
     static int port = 8007;
     List<String> clientRequestList;
-    static String[] arr = null;
     private static final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
     public static void main(String[] args) throws Exception {
@@ -70,14 +72,17 @@ public class Server {
         }
 
         if (debug)
-            System.out.println("Server is up to the: " + port+ "Port number");
+            System.out.println("Server is up and running on port Number : " + port);
 
         currentDir = new File(dir);
-
+        //Server Implementation with Multi threading
         Server server = new Server();
         Runnable task = () -> {
             try {
-                server.serveRequestToServer(port);
+                tId = Thread.currentThread().getId();
+                if(debug)
+                    System.out.println("Server is processing a request on thread: "+tId);
+                server.processRequestServer(port);
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -86,13 +91,19 @@ public class Server {
         thread.start();
     }
 
-    private void serveRequestToServer(int port) throws Exception {
+    /**
+     *
+     * @param port
+     * @throws Exception
+     */
+    private void processRequestServer(int port) throws Exception {
         try (DatagramChannel channel = DatagramChannel.open()) {
             channel.bind(new InetSocketAddress(port));
 
-            ByteBuffer buf = ByteBuffer.allocate(Packet.MAX_LEN).order(ByteOrder.BIG_ENDIAN);
+            ByteBuffer buf = ByteBuffer.allocate(Packet.MAX_LEN)
+                                        .order(ByteOrder.BIG_ENDIAN);
 
-            for (;;) {
+             while(true) {
                 buf.clear();
                 SocketAddress router = channel.receive(buf);
                 if (router != null) {
@@ -104,7 +115,6 @@ public class Server {
 
                     String requestPayload = new String(packet.getPayload(), UTF_8);
                     if (requestPayload.equals("Connect")) {
-
                         System.out.println(requestPayload);
                         Packet resp = packet.toBuilder().setPayload("ACK".getBytes()).create();
                         channel.send(resp.toBuffer(), router);
@@ -115,13 +125,13 @@ public class Server {
                         Packet resp = packet.toBuilder().setPayload(responsePayload.getBytes()).create();
                         channel.send(resp.toBuffer(), router);
                     } else if (requestPayload.equals("Received")) {
-                        arr = requestPayload.split(" ");
+
                         System.out.println(requestPayload);
                         Packet respClose = packet.toBuilder().setPayload("Close".getBytes()).create();
                         channel.send(respClose.toBuffer(), router);
 
                     } else if (requestPayload.equals("Ok")) {
-                        arr = requestPayload.split(" ");
+
                         System.out.println(requestPayload + " received..!");
 
                     }
@@ -130,11 +140,19 @@ public class Server {
         }
 
     }
+
+    /**
+     *
+     * @param requestPayload
+     * @return
+     * @throws Exception
+     */
     private String processRequest(String requestPayload) throws Exception {
         String body = "{\n";
-        String method ="";
+
         String responsePayload = "";
-        String splitArray[];
+        String[] splitArray;
+        String method ="";
         String clientRequestURL ="";
         List<String> files = getFilesFromDir(new File(dir));
         //String temp = arr[1];
@@ -241,7 +259,7 @@ public class Server {
 
             responsePayload = responseHeader ;
         }
-        else if(requestPayload.contains("post") && (requestPayload.contains("txt") || requestPayload.contains("json")|| requestPayload.contains("-d"))){
+        else if(method.contains("post") && (requestPayload.contains("txt") || requestPayload.contains("json")|| requestPayload.contains("-d"))){
             splitArray = requestPayload.split(" ");
             String fileName = splitArray[splitArray.length-3].split("/")[4];
             String responseHeader;
@@ -260,8 +278,6 @@ public class Server {
                 {
                     dataToWrite+= readToFile(fileToWrite);
                 }
-
-
                 responseHeader = getResponseHeaders(FILE_OVERWRITTEN_STATUS_CODE);
             }
             else
@@ -274,7 +290,6 @@ public class Server {
                 dataToWrite += splitArray[splitArray.length-1].replaceAll("\'","");
                 writeToFile(fileToWrite,dataToWrite);
             }
-
 
 
             dataBody +=   splitArray[splitArray.length-1].replaceAll("\'","") +"\n";
@@ -359,6 +374,11 @@ public class Server {
         return responsePayload;
     }
 
+    /**
+     *
+     * @param currentDir
+     * @return
+     */
     static private List<String> getFilesFromDir(File currentDir) {
         List<String> filelist = new ArrayList<>();
         for (File file : currentDir.listFiles()) {
@@ -369,6 +389,12 @@ public class Server {
         return filelist;
     }
 
+    /**
+     *
+     * @param file
+     * @return
+     * @throws IOException
+     */
     static private String readToFile(File file) throws IOException {
         lock.readLock().lock();
         String st, response="";
@@ -390,6 +416,26 @@ public class Server {
         return response;
     }
 
+    /**
+     *
+     * @param status
+     * @return
+     */
+    static String getResponseHeaders(String status) {
+        DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+        Date date = new Date();
+        String datetime = dateFormat.format(date);
+        String responseHeaders = status + "\n" + CONNECTION_ALIVE + "\n" + Server.SERVER + "\n" + Server.DATE + datetime
+                + "\n" + ACCESS_CONTROL_ALLOW_ORIGIN + "\n" + ACCESS_CONTROL_ALLOW_CREDENTIALS + "\n" + VIA + "\n";
+        return responseHeaders;
+    }
+
+    /**
+     *
+     * @param file
+     * @param data
+     * @throws IOException
+     */
     static private void writeToFile(File file, String data) throws IOException {
         lock.writeLock().lock();
 
@@ -406,14 +452,5 @@ public class Server {
             lock.writeLock().unlock();
         }
 
-    }
-
-    static String getResponseHeaders(String status) {
-        DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
-        Date date = new Date();
-        String datetime = dateFormat.format(date);
-        String responseHeaders = status + "\n" + CONNECTIONA_LIVE + "\n" + Server.SERVER + "\n" + Server.DATE + datetime
-                + "\n" + ACCESS_CONTROL_ALLOW_ORIGIN + "\n" + ACCESS_CONTROL_ALLOW_CREDENTIALS + "\n" + VIA + "\n";
-        return responseHeaders;
     }
 }

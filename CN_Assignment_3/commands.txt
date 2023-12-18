@@ -4,9 +4,10 @@ httpfs -v -p 8007
 
 For Running Router:
 
-router --port=3000 --drop-rate=0.2 --max-delay=10ms --seed=1
-router --port=3000 --max-delay=10ms --seed=1
-router --port=3000 --drop-rate=0.2 --seed=1
+./router --port=3000 --drop-rate=0.2 --max-delay=10ms --seed=1
+
+./router --port=3000 --drop-rate=0.5 --max-delay=10ms --seed=1
+./router --port=3000 --drop-rate=0.2 --seed=1
 
 
 For Client:
